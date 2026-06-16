@@ -32,6 +32,11 @@ from populace.build.us import (
     us_source_coverage_diagnostics,
     write_us_source_coverage_diagnostics,
 )
+from populace.build.us.demographics import (
+    demographics_payload,
+    population_by_age_from_sim,
+    write_demographics,
+)
 from populace.calibrate import TargetRegistry, calibrate
 from populace.calibrate.diagnostics import (
     diagnostics_payload,
@@ -148,6 +153,11 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--learning-rate", type=float, default=0.12)
     parser.add_argument("--max-weight-ratio", type=float, default=5.0)
     parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument(
+        "--skip-demographics",
+        action="store_true",
+        help="Do not emit demographics.json (weighted population by age) for this release.",
+    )
     return parser.parse_args()
 
 
@@ -745,6 +755,26 @@ def _artifact_entry(path: str, sha: str, *, kind: str, revision: str) -> dict[st
     }
 
 
+def _write_demographics(
+    *,
+    release_dir: Path,
+    dataset_path: Path,
+    release_id: str,
+) -> None:
+    """Emit demographics.json: the dataset's weighted population by age band.
+
+    The fiscal-refresh release does not calibrate the age distribution, so this
+    is published as an emergent diagnostic (populace vs the Census age structure).
+    """
+    from policyengine_us import Microsimulation
+    from policyengine_us.data import USSingleYearDataset
+
+    sim = Microsimulation(dataset=USSingleYearDataset(file_path=str(dataset_path)))
+    ages, weights = population_by_age_from_sim(sim, PERIOD)
+    payload = demographics_payload(ages, weights, period=PERIOD, release_id=release_id)
+    write_demographics(payload, release_dir / "demographics.json")
+
+
 def _build_manifests(
     *,
     release_id: str,
@@ -853,6 +883,18 @@ def _build_manifests(
                 coverage_sha,
                 kind="diagnostics",
                 revision=release_id,
+            ),
+            **(
+                {
+                    "demographics": _artifact_entry(
+                        "demographics.json",
+                        _sha256(release_dir / "demographics.json"),
+                        kind="diagnostics",
+                        revision=release_id,
+                    )
+                }
+                if (release_dir / "demographics.json").exists()
+                else {}
             ),
         },
     }
@@ -979,6 +1021,13 @@ def main() -> None:
             "target_compilation": compilation,
         },
     )
+
+    if not args.skip_demographics:
+        _write_demographics(
+            release_dir=release_dir,
+            dataset_path=dataset_path,
+            release_id=release_id,
+        )
 
     active_aliases = DIRECT_ACTIVE_ALIASES
     coverage = us_source_coverage_diagnostics(

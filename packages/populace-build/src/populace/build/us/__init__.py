@@ -32,6 +32,14 @@ from populace.build.source_manifest import (
     SourceStageSpec,
     load_source_manifest,
 )
+from populace.build.us.demographics import (
+    AGE_BANDS,
+    DEMOGRAPHICS_SCHEMA_VERSION,
+    AgeBand,
+    compute_age_distribution,
+    demographics_payload,
+    write_demographics,
+)
 from populace.build.us.fiscal_targets import (
     US_FISCAL_LEDGER_PARITY_REGISTRY,
     US_FISCAL_LEDGER_PARITY_REPORT,
@@ -61,6 +69,12 @@ from populace.frame import Frame
 __all__ = [
     "BuildConfig",
     "SimpleTaxExpenditureReform",
+    "AgeBand",
+    "AGE_BANDS",
+    "DEMOGRAPHICS_SCHEMA_VERSION",
+    "compute_age_distribution",
+    "demographics_payload",
+    "write_demographics",
     "ARCH_US_SOURCE_COVERAGE_CONTRACT_COMMIT",
     "US_DONORS",
     "US_FISCAL_MACRO_REALISM_BANDS",
