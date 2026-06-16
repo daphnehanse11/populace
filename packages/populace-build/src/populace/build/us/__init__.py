@@ -46,6 +46,15 @@ from populace.build.us.fiscal_targets import (
     US_STATE_INCOME_TAX_TARGET_SPECS,
     SimpleTaxExpenditureReform,
 )
+from populace.build.us.reform_validation import (
+    REFORM_VALIDATION_SCHEMA_VERSION,
+    ReformValidationSpec,
+    in_sample_reform_specs,
+    load_default_reform_specs,
+    out_of_sample_reform_specs,
+    reform_validation_payload,
+    write_reform_validation,
+)
 from populace.build.us.source_coverage import (
     ARCH_US_SOURCE_COVERAGE_CONTRACT_COMMIT,
     US_SOURCE_COVERAGE,
@@ -61,6 +70,8 @@ from populace.frame import Frame
 __all__ = [
     "BuildConfig",
     "SimpleTaxExpenditureReform",
+    "ReformValidationSpec",
+    "REFORM_VALIDATION_SCHEMA_VERSION",
     "ARCH_US_SOURCE_COVERAGE_CONTRACT_COMMIT",
     "US_DONORS",
     "US_FISCAL_MACRO_REALISM_BANDS",
@@ -80,8 +91,13 @@ __all__ = [
     "US_STAGE_NAMES",
     "US_STATE_INCOME_TAX_TARGET_SPECS",
     "hard_target_package_aliases",
+    "in_sample_reform_specs",
+    "load_default_reform_specs",
+    "out_of_sample_reform_specs",
+    "reform_validation_payload",
     "source_gap_family_ids",
     "us_plan",
+    "write_reform_validation",
     "us_source_coverage_diagnostics",
     "us_source_coverage_gate",
     "write_us_source_coverage_diagnostics",

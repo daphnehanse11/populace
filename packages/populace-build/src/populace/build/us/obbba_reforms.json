@@ -1,0 +1,54 @@
+{
+  "_comment": "Out-of-sample reform-validation set: provisions of the 2025 One Big Beautiful Bill Act (OBBBA) that policyengine-us models in its baseline. Each reform is encoded as a COUNTERFACTUAL REVERT (the provision is already in the baseline, so we turn it off); the provision's budget effect is therefore baseline - reform (effect_direction='baseline_minus_reform'), which is sign-comparable to the JCT enactment score. We include only genuinely new provisions whose JCT line is NOT bundled with TCJA extension, so the parameter revert captures the whole provision. JCT figures are the per-fiscal-year lines from JCX-35-25 (July 1 2025), conventional/static, in dollars. We compare a single simulated year (period) to JCT's same-year line. Provisions excluded for now: SALT cap (JCT line bundles cap-extension + raise; sign ambiguous), CTC / standard deduction (JCT lines bundle TCJA extension + enhancement; a clean revert isn't isolable), senior bonus deduction (no standalone JCX-35-25 line), Trump accounts (not modeled in policyengine-us), estate exemption (rarely fires in microdata).",
+  "schema_version": 1,
+  "jct_document": {
+    "id": "JCX-35-25",
+    "title": "Estimated Revenue Effects Relative to the Present Law Baseline of the Tax Provisions in Title VII-Finance of the substitute legislation as passed by the Senate (FY2025 budget reconciliation)",
+    "published": "2025-07-01",
+    "url": "https://www.jct.gov/publications/2025/jcx-35-25/"
+  },
+  "reforms": [
+    {
+      "id": "obbba_no_tax_on_tips",
+      "name": "OBBBA — No tax on tips (tip income deduction)",
+      "category": "OBBBA",
+      "description": "Deduction for qualified tip income (sunsets 12/31/2028). Validated by reverting the tip-income deduction cap to 0 over the provision window and comparing the simulated FY2026 income-tax revenue loss to the JCT FY2026 line.",
+      "period": 2026,
+      "budget_measure": "income_tax",
+      "effect_direction": "baseline_minus_reform",
+      "parameter_changes": {
+        "gov.irs.deductions.tip_income.cap": { "2025-01-01.2028-12-31": 0 }
+      },
+      "jct": {
+        "score": -10121000000,
+        "score_type": "conventional",
+        "window": "FY2026",
+        "source": "JCX-35-25, Ch.2 line 1 (FY2026)",
+        "source_url": "https://www.jct.gov/publications/2025/jcx-35-25/"
+      }
+    },
+    {
+      "id": "obbba_no_tax_on_overtime",
+      "name": "OBBBA — No tax on overtime (overtime income deduction)",
+      "category": "OBBBA",
+      "description": "Deduction for qualified overtime premium income (sunsets 12/31/2028). Validated by reverting the overtime-income deduction cap to 0 over the provision window and comparing the simulated FY2026 income-tax revenue loss to the JCT FY2026 line.",
+      "period": 2026,
+      "budget_measure": "income_tax",
+      "effect_direction": "baseline_minus_reform",
+      "parameter_changes": {
+        "gov.irs.deductions.overtime_income.cap.JOINT": { "2025-01-01.2028-12-31": 0 },
+        "gov.irs.deductions.overtime_income.cap.SINGLE": { "2025-01-01.2028-12-31": 0 },
+        "gov.irs.deductions.overtime_income.cap.HEAD_OF_HOUSEHOLD": { "2025-01-01.2028-12-31": 0 },
+        "gov.irs.deductions.overtime_income.cap.SURVIVING_SPOUSE": { "2025-01-01.2028-12-31": 0 },
+        "gov.irs.deductions.overtime_income.cap.SEPARATE": { "2025-01-01.2028-12-31": 0 }
+      },
+      "jct": {
+        "score": -32806000000,
+        "score_type": "conventional",
+        "window": "FY2026",
+        "source": "JCX-35-25, Ch.2 line 2 (FY2026)",
+        "source_url": "https://www.jct.gov/publications/2025/jcx-35-25/"
+      }
+    }
+  ]
+}

@@ -32,6 +32,12 @@ from populace.build.us import (
     us_source_coverage_diagnostics,
     write_us_source_coverage_diagnostics,
 )
+from populace.build.us.reform_validation import (
+    default_simulate_factory,
+    load_default_reform_specs,
+    reform_validation_payload,
+    write_reform_validation,
+)
 from populace.calibrate import TargetRegistry, calibrate
 from populace.calibrate.diagnostics import (
     diagnostics_payload,
@@ -148,6 +154,21 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--learning-rate", type=float, default=0.12)
     parser.add_argument("--max-weight-ratio", type=float, default=5.0)
     parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument(
+        "--skip-reform-validation",
+        action="store_true",
+        help="Do not emit reform_validation.json for this release.",
+    )
+    parser.add_argument(
+        "--skip-out-of-sample-reforms",
+        action="store_true",
+        help=(
+            "Emit reform_validation.json with the in-sample JCT tax-expenditure "
+            "rows only (from the calibration fit), skipping the out-of-sample "
+            "OBBBA simulations. Faster; useful when policyengine-us microsim runs "
+            "are not wanted in the build."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -745,6 +766,49 @@ def _artifact_entry(path: str, sha: str, *, kind: str, revision: str) -> dict[st
     }
 
 
+def _in_sample_estimates(result) -> dict[str, float]:
+    """Calibrated final estimate per JCT target, keyed by target name.
+
+    The in-sample reform validation rows reuse the calibration's own fit (the
+    JCT tax-expenditure targets *are* calibration targets), so no extra
+    simulation is run for them.
+    """
+    estimates: dict[str, float] = {}
+    for diagnostic, target in zip(result.diagnostics, result.problem.targets, strict=True):
+        value = diagnostic.final_estimate
+        if value is not None and math.isfinite(float(value)):
+            estimates[target.name] = float(value)
+    return estimates
+
+
+def _write_reform_validation(
+    *,
+    release_dir: Path,
+    dataset_path: Path,
+    result,
+    registry: TargetRegistry,
+    release_id: str,
+    simulate_out_of_sample: bool,
+) -> None:
+    """Emit reform_validation.json: populace budget effects vs JCT scores.
+
+    In-sample JCT tax-expenditure reforms come straight from the calibration
+    fit; out-of-sample OBBBA provisions are simulated on the freshly written
+    release H5 (skipped if ``simulate_out_of_sample`` is False, e.g. for a fast
+    diagnostics-only build).
+    """
+    specs = load_default_reform_specs(period=PERIOD)
+    simulate = default_simulate_factory(dataset_path) if simulate_out_of_sample else None
+    payload = reform_validation_payload(
+        specs,
+        period=PERIOD,
+        simulate=simulate,
+        in_sample_estimates=_in_sample_estimates(result),
+        release_id=release_id,
+    )
+    write_reform_validation(payload, release_dir / "reform_validation.json")
+
+
 def _build_manifests(
     *,
     release_id: str,
@@ -853,6 +917,18 @@ def _build_manifests(
                 coverage_sha,
                 kind="diagnostics",
                 revision=release_id,
+            ),
+            **(
+                {
+                    "reform_validation": _artifact_entry(
+                        "reform_validation.json",
+                        _sha256(release_dir / "reform_validation.json"),
+                        kind="diagnostics",
+                        revision=release_id,
+                    )
+                }
+                if (release_dir / "reform_validation.json").exists()
+                else {}
             ),
         },
     }
@@ -979,6 +1055,16 @@ def main() -> None:
             "target_compilation": compilation,
         },
     )
+
+    if not args.skip_reform_validation:
+        _write_reform_validation(
+            release_dir=release_dir,
+            dataset_path=dataset_path,
+            result=result,
+            registry=registry,
+            release_id=release_id,
+            simulate_out_of_sample=not args.skip_out_of_sample_reforms,
+        )
 
     active_aliases = DIRECT_ACTIVE_ALIASES
     coverage = us_source_coverage_diagnostics(
