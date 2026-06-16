@@ -41,6 +41,7 @@ __all__ = [
     "ReformValidationSpec",
     "in_sample_reform_specs",
     "out_of_sample_reform_specs",
+    "tax_expenditure_reform_specs",
     "load_default_reform_specs",
     "reform_validation_payload",
     "write_reform_validation",
@@ -71,7 +72,10 @@ class ReformValidationSpec:
     category: str
     in_sample: bool
     period: int
-    jct_score: float
+    # The published figure to compare against. None for provisions neither JCT
+    # nor Treasury score (e.g. the regular standard deduction, which both treat
+    # as baseline) — those rows publish the simulated magnitude with no error.
+    jct_score: float | None
     jct_window: str
     jct_source: str
     jct_source_url: str
@@ -196,15 +200,66 @@ def out_of_sample_reform_specs(
     return tuple(specs)
 
 
+def _tax_expenditure_config_path() -> Path:
+    return Path(str(files(__package__).joinpath("tax_expenditure_reforms.json")))
+
+
+def tax_expenditure_reform_specs(
+    path: Path | None = None,
+    *,
+    period: int,
+) -> tuple[ReformValidationSpec, ...]:
+    """Big-provision tax-expenditure reforms from JSON config.
+
+    Each is a ``neutralize_variable`` reform (repeal the provision) whose
+    simulated revenue change is compared to a published tax-expenditure figure
+    (JCT where it scores the provision, Treasury otherwise — recorded per row).
+    The ``in_sample`` flag reflects whether the dataset is calibrated to that
+    provision (e.g. EITC is, the standard deduction is not), so a consumer can
+    weight the result accordingly.
+    """
+    config_path = path or _tax_expenditure_config_path()
+    if not config_path.exists():
+        return ()
+    payload = json.loads(config_path.read_text())
+    specs: list[ReformValidationSpec] = []
+    for raw in payload.get("reforms", ()):
+        bench = raw.get("benchmark", {})
+        specs.append(
+            ReformValidationSpec(
+                id=raw["id"],
+                name=raw["name"],
+                category=raw.get("category", "Tax expenditure"),
+                in_sample=bool(raw.get("in_sample", False)),
+                period=int(raw.get("period", period)),
+                jct_score=(float(bench["score"]) if bench.get("score") is not None else None),
+                jct_window=str(bench.get("window", "")),
+                jct_source=str(bench.get("source", "")),
+                jct_source_url=str(bench.get("source_url", "")),
+                jct_score_type=str(bench.get("score_type", "tax_expenditure")),
+                budget_measure=str(raw.get("budget_measure", DEFAULT_BUDGET_MEASURE)),
+                description=str(raw.get("description", "")),
+                neutralized_variable=raw["neutralized_variable"],
+                # Neutralizing the provision raises tax by the expenditure amount
+                # (positive), matching the positive published figure.
+                effect_direction="reform_minus_baseline",
+            )
+        )
+    return tuple(specs)
+
+
 def load_default_reform_specs(
     *,
     period: int,
     obbba_path: Path | None = None,
+    tax_expenditure_path: Path | None = None,
 ) -> tuple[ReformValidationSpec, ...]:
-    """In-sample JCT tax expenditures + out-of-sample OBBBA provisions."""
+    """In-sample JCT tax expenditures + out-of-sample OBBBA provisions + the
+    big-provision tax-expenditure reforms (CTC/EITC/CDCC/standard/itemized)."""
     return (
         *in_sample_reform_specs(period=period),
         *out_of_sample_reform_specs(obbba_path, period=period),
+        *tax_expenditure_reform_specs(tax_expenditure_path, period=period),
     )
 
 
@@ -295,7 +350,7 @@ def reform_validation_payload(
                 "period": spec.period,
                 "description": spec.description or None,
                 "jct": {
-                    "score": _finite(spec.jct_score),
+                    "score": None if spec.jct_score is None else _finite(spec.jct_score),
                     "score_type": spec.jct_score_type,
                     "window": spec.jct_window or None,
                     "source": spec.jct_source or None,

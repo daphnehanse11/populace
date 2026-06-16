@@ -16,6 +16,7 @@ from populace.build.us.reform_validation import (
     in_sample_reform_specs,
     out_of_sample_reform_specs,
     reform_validation_payload,
+    tax_expenditure_reform_specs,
     write_reform_validation,
 )
 
@@ -133,6 +134,35 @@ def test_shipped_obbba_config_is_out_of_sample_counterfactual():
         assert spec.period == 2026
         assert spec.jct_score < 0  # OBBBA provisions are costs
         assert spec.jct_source.startswith("JCX-35-25")
+
+
+def test_shipped_tax_expenditure_specs_neutralize_big_provisions():
+    specs = tax_expenditure_reform_specs(period=2024)
+    by_id = {s.id for s in specs}
+    assert {"te_ctc", "te_eitc", "te_cdcc", "te_standard_deduction", "te_itemized_total"} <= by_id
+    for spec in specs:
+        assert spec.neutralized_variable  # all are repeals
+        assert spec.effect_direction == "reform_minus_baseline"  # neutralize raises tax
+    eitc = next(s for s in specs if s.id == "te_eitc")
+    assert eitc.in_sample is True  # calibrated to SOI EITC targets
+    std = next(s for s in specs if s.id == "te_standard_deduction")
+    assert std.jct_score is None  # baseline in both JCT and Treasury — no benchmark
+
+
+def test_null_benchmark_row_publishes_magnitude_only():
+    spec = ReformValidationSpec(
+        id="te_std", name="Standard deduction", category="Tax expenditure",
+        in_sample=False, period=2024, jct_score=None, jct_window="FY2024",
+        jct_source="not scored", jct_source_url="", neutralized_variable="standard_deduction",
+    )
+
+    def simulate(reform):
+        return _FakeSim({"income_tax": 2.28e12 if reform is not None else 2.0e12})
+
+    payload = reform_validation_payload([spec], period=2024, simulate=simulate)
+    row = payload["reforms"][0]
+    assert row["jct"]["score"] is None
+    assert row["populace"]["budget_effect"] == pytest.approx(280e9)  # repeal magnitude
 
 
 def test_out_of_sample_null_when_no_simulate():

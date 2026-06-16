@@ -1,0 +1,91 @@
+{
+  "_comment": "Big-provision tax-expenditure validation. Each reform repeals a major provision (neutralize_variable) on the calibrated dataset; the simulated revenue change (income_tax delta, which captures the credit's refundable portion too) is compared to the published tax-expenditure figure. JCT where it scores the provision (Estimates of Federal Tax Expenditures FY2024-2028, JCX-48-24, Dec 11 2024, Table 1, FY2024, $); Treasury (Tax Expenditures FY2025, OTA) where JCT bundles it. Figures are FY2024 single-year totals incl. the outlay/refundable portion. in_sample flags whether the dataset is calibrated to the provision: EITC is (SOI EITC-by-AGI targets), CTC partly (SOI CTC amounts), CDCC/standard/itemized are not. The individual itemized deductions (SALT, mortgage, charitable, medical, QBI) are already validated in-sample via US_JCT_TAX_EXPENDITURE_REFORMS, so they are not duplicated here. Standard deduction and 'all itemized combined' have NO published tax-expenditure figure (both JCT and Treasury treat the standard deduction as baseline, and neither publishes a combined itemized total), so they carry no benchmark and publish the repeal magnitude only.",
+  "schema_version": 1,
+  "reforms": [
+    {
+      "id": "te_ctc",
+      "name": "Child Tax Credit (incl. ODC)",
+      "category": "Tax expenditure",
+      "in_sample": false,
+      "period": 2024,
+      "neutralized_variable": "ctc",
+      "budget_measure": "income_tax",
+      "description": "Repeal the Child Tax Credit and Credit for Other Dependents. JCT line is 'Credit for children and other dependents'.",
+      "benchmark": {
+        "score": 173800000000,
+        "score_type": "tax_expenditure",
+        "window": "FY2024",
+        "source": "JCT JCX-48-24 Table 1 (rev 127.1B + outlay 46.7B)",
+        "source_url": "https://www.jct.gov/publications/2024/jcx-48-24/"
+      }
+    },
+    {
+      "id": "te_eitc",
+      "name": "Earned Income Tax Credit",
+      "category": "Tax expenditure",
+      "in_sample": true,
+      "period": 2024,
+      "neutralized_variable": "eitc",
+      "budget_measure": "income_tax",
+      "description": "Repeal the EITC. Mostly refundable, so the bulk is the outlay portion. The dataset is calibrated to SOI EITC-by-AGI targets, so this is an in-sample check.",
+      "benchmark": {
+        "score": 124200000000,
+        "score_type": "tax_expenditure",
+        "window": "FY2024",
+        "source": "JCT JCX-48-24 Table 1 (rev 66.9B + outlay 57.3B)",
+        "source_url": "https://www.jct.gov/publications/2024/jcx-48-24/"
+      }
+    },
+    {
+      "id": "te_cdcc",
+      "name": "Child & Dependent Care Credit",
+      "category": "Tax expenditure",
+      "in_sample": false,
+      "period": 2024,
+      "neutralized_variable": "cdcc",
+      "budget_measure": "income_tax",
+      "description": "Repeal the CDCC. JCT bundles it with the employer-provided-childcare exclusion, so the clean CDCC-only benchmark is Treasury's.",
+      "benchmark": {
+        "score": 3690000000,
+        "score_type": "tax_expenditure",
+        "window": "FY2024",
+        "source": "Treasury Tax Expenditures FY2025, Table 1 item 120",
+        "source_url": "https://home.treasury.gov/policy-issues/tax-policy/tax-expenditures"
+      }
+    },
+    {
+      "id": "te_standard_deduction",
+      "name": "Standard deduction (no official benchmark)",
+      "category": "Tax expenditure",
+      "in_sample": false,
+      "period": 2024,
+      "neutralized_variable": "standard_deduction",
+      "budget_measure": "income_tax",
+      "description": "Repeal the standard deduction. Both JCT and Treasury treat the regular standard deduction as part of the normal-tax baseline, so there is no published tax-expenditure figure; shown as a repeal magnitude only.",
+      "benchmark": {
+        "score": null,
+        "score_type": "none",
+        "window": "FY2024",
+        "source": "Not scored — standard deduction is baseline in both JCT and Treasury",
+        "source_url": "https://www.jct.gov/publications/2024/jcx-48-24/"
+      }
+    },
+    {
+      "id": "te_itemized_total",
+      "name": "All itemized deductions (no combined benchmark)",
+      "category": "Tax expenditure",
+      "in_sample": false,
+      "period": 2024,
+      "neutralized_variable": "itemized_taxable_income_deductions",
+      "budget_measure": "income_tax",
+      "description": "Repeal all itemized deductions at once. Neither JCT nor Treasury publishes a single combined itemized-deduction tax-expenditure figure (only components: SALT, mortgage, charitable, medical, …), so this carries no benchmark; the individual components are validated in-sample. Shown as a repeal magnitude only.",
+      "benchmark": {
+        "score": null,
+        "score_type": "none",
+        "window": "FY2024",
+        "source": "Not published as a combined figure — JCT/Treasury score itemized components individually",
+        "source_url": "https://www.jct.gov/publications/2024/jcx-48-24/"
+      }
+    }
+  ]
+}
